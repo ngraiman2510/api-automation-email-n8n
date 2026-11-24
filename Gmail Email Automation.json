@@ -1,0 +1,179 @@
+{
+  "name": "Gmail Email Automation",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5513a1ea-efee-4e05-879e-24b21b966461",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1nzMdIIg__F-e9b8wf8eaX8KTgtnnnPOircGzpTRl1Lk",
+          "mode": "list",
+          "cachedResultName": "n8n Assignment Data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nzMdIIg__F-e9b8wf8eaX8KTgtnnnPOircGzpTRl1Lk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nzMdIIg__F-e9b8wf8eaX8KTgtnnnPOircGzpTRl1Lk/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "15a066ba-78d7-43bb-a8e5-85982259c8b5",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xUdeTMB2EpjhXIC3",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "ad4adc4b-1eb0-41f9-a720-185c9b3946d3",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        448,
+        0
+      ],
+      "id": "eb9bf1ca-b359-4556-8169-4f897e20d46e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n\nconst lines = rows.map((item, i) => {\n  const r = item.json;\n  return `${i + 1}. Name: ${r.name} | Course: ${r.course} | Status: ${r.status}`;\n}).join('\\n');\n\nconst body = `Hi,\n\nHere is the latest data from the sheet (${rows.length} records):\n\n${lines}\n\nRegards,\nYour n8n email Bot`;\n\nreturn [{\n  json: {\n    subject: 'Data Summary from Google Sheet',\n    body: body\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -96
+      ],
+      "id": "8fbbb813-baae-4578-b153-8129c790fc95",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "nalleswaran2510@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        -96
+      ],
+      "id": "63221ba6-f8ae-4879-a57a-d42fae1f07c1",
+      "name": "Send a message",
+      "webhookId": "9ce37fd7-5308-48c5-ba17-f77bfb3eec51",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DsSJQl5YQ3e1zpNb",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5c8ee217-ffe8-46ff-97dc-2f5cf9389686",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "45a05a1e5d080de519cbe86a76e18491764121ce1293e880eabf3a97b9470103"
+  },
+  "nodeGroups": [],
+  "id": "eodHCgMIXUzI3PlC",
+  "tags": []
+}
