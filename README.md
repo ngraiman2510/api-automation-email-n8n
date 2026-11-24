@@ -1,119 +1,167 @@
-# Slack AI Bot Automation
+# Gmail & Slack Automations with n8n
 
-An n8n workflow that listens to Slack messages in a channel, sends them to
-OpenAI for analysis, and replies in the same channel with a structured
-response.
+This project contains **two separate n8n workflows**. Choose what you want to
+try, follow its setup, and run it from n8n:
 
-The workflow is built to recognize recipes, questions, tasks, summaries, and
-general conversations. The included configuration and Slack example focus on
-recipe generation.
+| I want to... | Open this workflow |
+|---|---|
+| Email a summary of rows in a Google Sheet | [Gmail Email Automation](#1-gmail-email-automation) |
+| Get an AI-generated reply to a Slack message | [Slackbot](#2-slackbot) |
 
-## Workflow
+They are independent: import and configure only the workflow you need, or set
+up both. Neither workflow is active by default.
 
-![n8n Slack automation workflow](slack-automation-n8n-workflow.png)
+## Before you start
 
-The workflow runs as follows:
+You will need an [n8n](https://n8n.io/) instance. Credentials are not included
+in the exported JSON files, so connect your own accounts after importing.
 
-1. **Slack Trigger** receives a new message from the configured Slack channel.
-2. **Edit Fields** extracts the message text, Slack user ID, channel ID, and
-   message timestamp.
-3. **Basic LLM Chain** sends the message to OpenAI and asks it to identify the
-   intent and category.
-4. **Structured Output Parser** converts the response into a consistent JSON
-   structure containing a category, intent, title, response, structured data,
-   and action-required flag.
-5. **Send a message** posts the generated result back to the Slack channel.
+| Workflow | Accounts and services needed |
+|---|---|
+| Gmail Email Automation | Google Sheets and Gmail |
+| Slackbot | Slack and OpenAI |
 
-## Example
+> **Protect your data:** Gmail automation sends spreadsheet values by email.
+> Slackbot sends Slack message text to OpenAI to generate a response. Use
+> accounts and data you are authorized to share, and never put API keys or
+> passwords in workflow exports.
 
-![Slack bot recipe response](slack-bot-reply.png)
+## Pick a workflow
 
-For example, a user can ask:
+### 1. Gmail Email Automation
+
+**What it does:** When you manually run the workflow, it reads rows from a
+Google Sheet, formats a text summary, and emails that summary using Gmail.
+
+![Gmail email automation workflow](Email-automation-n8n-workflow.png)
+
+#### The journey through the workflow
 
 ```text
-Hi! I need a recipe for Coconut Tiramisu.
+Click "Execute workflow"
+        ↓
+Read rows from Google Sheets
+        ↓
+Are any rows available?
+   No ──┴── Yes
+   Stop      Format a summary → Send one Gmail
 ```
 
-The bot analyzes the request and returns a formatted Slack response with
-ingredients, preparation steps, and cooking time.
+It reads the sheet rows and expects each row to contain `name`, `course`, and
+`status`. It sends one email with the subject **Data Summary from Google
+Sheet**, including a numbered line for each row. If there are no rows, no email
+is sent.
 
-## Files
+#### Set up Gmail automation
 
-- `Slackbot.json` - importable n8n workflow
-- `slack-automation-n8n-workflow.png` - screenshot of the workflow in n8n
-- `slack-bot-reply.png` - screenshot of the bot response in Slack
+1. In n8n, select **Import from File** and import
+   [`Gmail Email Automation.json`](./Gmail%20Email%20Automation.json).
+2. Open **Get row(s) in sheet** and connect your Google Sheets account.
+3. Select the spreadsheet and worksheet you want to summarize.
+4. Make sure the sheet's first row has these exact, lowercase column names:
 
-## Requirements
+   | `name` | `course` | `status` |
+   |---|---|---|
+   | Alice | Python | Active |
+   | Bob | Data Science | Completed |
 
-- An n8n instance
-- A Slack workspace
-- A Slack app with permission to receive channel messages and post messages
-- An OpenAI API account
+5. Open **Send a message**, connect your Gmail account, and change **Send To**
+   to the intended recipient. The exported workflow has a sample recipient
+   configured.
+6. Save the workflow. Click **Execute workflow** to test it.
+7. Check the recipient's inbox and the execution details in n8n.
 
-The workflow uses `gpt-4o-mini` and may incur OpenAI API usage charges.
+The included [`n8n Assignment Data.xlsx`](./n8n%20Assignment%20Data.xlsx) is an
+Excel workbook. This workflow reads a **Google Sheet**, not a local Excel file:
+upload/convert the workbook to Google Sheets, then select that Google Sheet in
+the node.
 
-## Slack setup
+#### Example email
 
-1. Create a Slack app in the Slack workspace.
-2. Subscribe the app to message events for the channel that will contain the bot.
-3. Add the app to that channel.
-4. In n8n, create a Slack API credential and connect it to the Slack Trigger
-   and Send a message nodes.
-5. Select the target Slack channel in both Slack nodes.
+[Open the example Gmail summary (PDF)](./Gmail%20-%20Data%20Summary%20from%20Google%20Sheet.pdf)
 
-The exact Slack app scopes depend on your workspace configuration, but the app
-must be able to read messages from the channel and post messages as a bot.
+### 2. Slackbot
 
-## OpenAI setup
+**What it does:** When someone sends a message in the configured Slack
+channel, the workflow sends the text to an OpenAI model, parses a structured
+response, and posts a reply in that channel.
 
-In n8n, create an OpenAI API credential and assign it to the **OpenAI Chat
-Model** node.
+![Slack automation workflow](slack-automation-n8n-workflow.png)
 
-Keep the API key private. Do not add it to the workflow JSON or commit it to
-source control.
+#### The journey through the workflow
 
-## Import and configure
-
-1. Open n8n and choose **Import from File**.
-2. Import `Slackbot.json`.
-3. Open the **Slack Trigger** node and connect it to the Slack app credential.
-4. Select the Slack channel to monitor.
-5. Open **OpenAI Chat Model** and select an OpenAI credential.
-6. Open **Send a message** and select the same Slack credential and channel.
-7. Activate the workflow.
-
-The exported JSON contains references to the original Slack channel and
-credential IDs. Re-select the channel and credentials after importing the
-workflow into another n8n instance.
-
-## Structured response
-
-The model is prompted to return data in this format:
-
-```json
-{
-  "category": "recipe",
-  "intent": "generate_recipe",
-  "title": "Coconut Tiramisu",
-  "response": "A complete generated response",
-  "structured_data": {
-    "ingredients": [],
-    "steps": [],
-    "cooking_time": "15 minutes"
-  },
-  "action_required": false
-}
+```text
+Post a message in the selected Slack channel
+        ↓
+Extract the message text
+        ↓
+OpenAI interprets the request and creates structured output
+        ↓
+Post a reply in Slack
 ```
 
-The Send a message node currently formats this response as a recipe. Requests
-from other categories may require extending the node so that it safely renders
-their `response` or category-specific fields.
+The prompt is designed for questions, summaries, tasks, recipes, and general
+conversation. The model is set to `gpt-4o-mini`, with web search enabled.
+**Important:** the current **Send a message** node formats the response using
+recipe fields (title, ingredients, steps, and cooking time). A recipe request
+is the best end-to-end test. To support other response types in Slack, update
+that node's message formatting to match the structured output.
 
-## Test
+#### Set up Slackbot
 
-1. Activate the workflow.
-2. Post a message in the configured Slack channel.
-3. Add the Slack app to that channel if it is not already present.
-4. Review the n8n execution to confirm that Slack, OpenAI, and the output parser
-   all receive the expected data.
-5. Confirm that a bot reply appears in Slack.
+1. In n8n, select **Import from File** and import
+   [`Slackbot.json`](./Slackbot.json).
+2. In your Slack workspace, create or configure a Slack app that can receive
+   message events in your chosen channel and post messages there.
+3. Invite/add the app to that channel.
+4. In n8n, connect your Slack account to both **Slack Trigger** and
+   **Send a message**.
+5. Select the **same channel** in both nodes. The exported workflow points to
+   an example channel; choose a channel in your own workspace.
+6. Connect your OpenAI credential to **OpenAI Chat Model**.
+7. Save and activate/publish the workflow.
+8. Post a recipe request in the selected channel, for example:
+
+   > Can you give me a recipe for coconut tiramisu?
+
+9. Confirm the bot's reply appears in the channel and inspect the execution in
+   n8n if it does not.
+
+Your Slack app needs the appropriate permissions and event subscriptions for
+the channel type you use. Follow your workspace's Slack app installation and
+approval process.
+
+#### Example Slack reply
+
+![Example Slackbot response](slack-bot-reply.png)
+
+## What's in this folder?
+
+| File | Purpose |
+|---|---|
+| `Gmail Email Automation.json` | Importable Google Sheets-to-Gmail workflow |
+| `Slackbot.json` | Importable Slack-to-OpenAI reply workflow |
+| `n8n Assignment Data.xlsx` | Example source workbook for the Gmail workflow |
+| `Email-automation-n8n-workflow.png` | Gmail workflow screenshot |
+| `Gmail - Data Summary from Google Sheet.pdf` | Example Gmail summary |
+| `slack-automation-n8n-workflow.png` | Slack workflow screenshot |
+| `slack-bot-reply.png` | Example Slackbot reply |
+
+## If something goes wrong
+
+| Problem | Try this |
+|---|---|
+| A node asks for a credential | Select or create your own account credential in n8n. Exported credentials cannot be reused from another n8n instance. |
+| Gmail sends no summary | Confirm there are rows in the selected Google Sheet and that the column names are `name`, `course`, and `status`. Check the **If** node and Gmail execution. |
+| Gmail sends to the wrong person | Update **Send To** in the Gmail **Send a message** node before executing. |
+| Slackbot does not trigger | Confirm the workflow is active, the Slack app is installed in the selected channel, and message events are configured. |
+| Slackbot does not post a reply | Check the Slack and OpenAI credentials, channel selection in both Slack nodes, and the n8n execution details. |
+| A non-recipe Slack request has an incomplete reply | The current Slack message template expects recipe fields. Update **Send a message** to format other structured response categories. |
+
+## Want to customize a workflow?
+
+- In Gmail automation, edit the JavaScript in **Code in JavaScript** to change
+  the summary format, or change the subject and recipient in **Send a message**.
+- In Slackbot, edit the prompt in **Basic LLM Chain** to change how messages
+  are answered. Update **Send a message** as well if your new output format
+  differs from the recipe layout.
